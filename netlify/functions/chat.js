@@ -9,12 +9,29 @@ LÍMITES: No haces tareas. No sustituyes padres ni maestros. Aliado IA no enseñ
 Si el usuario escribe en inglés, responde en inglés.`;
 
 exports.handler = async (event) => {
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      },
+      body: '',
+    };
+  }
+
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
 
   try {
-    const { messages } = JSON.parse(event.body);
+    const body = JSON.parse(event.body);
+    const messages = body.messages || [];
+
+    // Filter to only valid messages with content
+    const validMessages = messages.filter(m => m.role && m.content && m.content.trim());
+
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -26,19 +43,23 @@ exports.handler = async (event) => {
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1000,
         system: SYSTEM_PROMPT,
-        messages,
+        messages: validMessages,
       }),
     });
 
     const data = await response.json();
     return {
       statusCode: 200,
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      },
       body: JSON.stringify(data),
     };
   } catch (err) {
     return {
       statusCode: 500,
+      headers: { 'Access-Control-Allow-Origin': '*' },
       body: JSON.stringify({ error: err.message }),
     };
   }
