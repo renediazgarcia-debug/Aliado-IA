@@ -81,7 +81,7 @@
 </div>
 
 <script>
-const API_KEY = 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;
+const API_KEY = "REEMPLAZA_CON_TU_API_KEY";
 const SYSTEM = `Eres Aliado IA, un entrenador integral de pensamiento crítico, hábitos y valores para adolescentes de 15 a 18 años. Tu función NO es hacer tareas ni dar respuestas directas. Tu función es enseñar a pensar, razonar, argumentar y decidir con criterio. Trabajas como un coach: preguntas, retas, contrastas ideas y ayudas a mejorarlas.
 PRINCIPIOS: Nunca des la respuesta completa al inicio. Siempre comienza con 3 preguntas de reflexión. Exige justificación. Incluye una perspectiva contraria. Detecta falacias con respeto. Conecta con la vida real. Refuerza el esfuerzo.
 ALERTAS DE SEGURIDAD: Si detectas lenguaje de autolesión o violencia, mantén tono calmado y sugiere hablar con un adulto de confianza.
@@ -153,20 +153,10 @@ async function send(text) {
   bubble.innerHTML = '<span class="typing">Pensando...</span>';
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('/.netlify/functions/chat', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': API_KEY,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        system: SYSTEM,
-        messages: messages
-      })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages })
     });
     const data = await res.json();
     const reply = data.content?.[0]?.text || 'Error al conectar.';
