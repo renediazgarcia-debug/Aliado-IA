@@ -1,3 +1,5 @@
+const https = require('https');
+
 const SYSTEM_PROMPT = `Eres Aliado IA, un entrenador integral de pensamiento crítico, hábitos y valores para adolescentes de 15 a 18 años. Tu función NO es hacer tareas ni dar respuestas directas. Tu función es enseñar a pensar, razonar, argumentar y decidir con criterio. Trabajas como un coach: preguntas, retas, contrastas ideas y ayudas a mejorarlas.
 
 PRINCIPIOS: Nunca des la respuesta completa al inicio. Siempre comienza con 3 preguntas de reflexión. Exige justificación con preguntas como: "¿Por qué piensas eso?", "¿Qué evidencia tienes?", "¿Cómo lo explicarías a alguien más?". Incluye una perspectiva contraria. Detecta falacias con respeto. Conecta con la vida real: escuela, amigos, familia, redes sociales. Refuerza el esfuerzo, celebra avances pequeños.
@@ -28,32 +30,39 @@ exports.handler = async (event) => {
   try {
     const body = JSON.parse(event.body);
     const messages = body.messages || [];
-
-    // Filter to only valid messages with content
     const validMessages = messages.filter(m => m.role && m.content && m.content.trim());
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        system: SYSTEM_PROMPT,
-        messages: validMessages,
-      }),
+    const payload = JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      system: SYSTEM_PROMPT,
+      messages: validMessages,
     });
 
-    const data = await response.json();
+    const data = await new Promise((resolve, reject) => {
+      const req = https.request({
+        hostname: 'api.anthropic.com',
+        path: '/v1/messages',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
+          'Content-Length': Buffer.byteLength(payload),
+        },
+      }, (res) => {
+        let raw = '';
+        res.on('data', chunk => raw += chunk);
+        res.on('end', () => resolve(JSON.parse(raw)));
+      });
+      req.on('error', reject);
+      req.write(payload);
+      req.end();
+    });
+
     return {
       statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
       body: JSON.stringify(data),
     };
   } catch (err) {
